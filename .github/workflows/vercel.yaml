@@ -77,7 +77,7 @@ jobs:
           git config user.name mlst-kr
           git config user.email 212713209+mlst-kr@users.noreply.github.com
           git add .
-          git commit -F "$RUNNER_TEMP/.commit_msg" --author="${{ steps.commits.outputs.author }}" --trailer "Co-authored-by: ${{ steps.commits.outputs.committer }}" --trailer "Co-authored-by: github-actions <41898282+github-actions[bot]@users.noreply.github.com>" --signoff --quiet
+          git commit -F "$RUNNER_TEMP/.commit_msg" --author="github-actions <41898282+github-actions[bot]@users.noreply.github.com>" --trailer "Co-authored-by: ${{ steps.commits.outputs.author }}" --trailer "Co-authored-by: ${{ steps.commits.outputs.committer }}" --signoff --quiet
 
       - name: Publish
         uses: ad-m/github-push-action@77c5b412c50b723d2a4fbc6d71fb5723bcd439aa
