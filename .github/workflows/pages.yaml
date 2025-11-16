@@ -49,9 +49,9 @@ jobs:
           path: dist
           show-progress: false
 
-      - name: Clear previous build outputs
+      - name: Run some commands
         shell: bash
-        run: mv dist/.git .; rm -rf dist; mkdir dist; mv .git dist/
+        run: rm -rf src/.git; mv dist/.git src/.git; rm -rf dist; mv ./src ./dist
 
       - name: Commit build outputs
         shell: bash
