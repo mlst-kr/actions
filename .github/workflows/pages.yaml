@@ -1,0 +1,46 @@
+name: Build and Publish
+on:
+  workflow_dispatch:
+    inputs:
+      attempts:
+        type: number
+        required: true
+        default: "0"
+      repo:
+        type: string
+        required: true
+      ref:
+        type: string
+        required: true
+
+permissions:
+  contents: none
+
+jobs:
+  build:
+    name: Build repository
+    runs-on: ubuntu-slim
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          repository: milestone-kr/${{ inputs.repo }}
+          ref: ${{ inputs.ref }}
+          ssh-key: ${{ secrets.SSH_KEY }}
+          submodules: true
+          show-progress: false
+
+      - name: Commit
+        shell: bash
+        run: |
+          AUTHOR=$(git show -s --format='%an <%ae>' HEAD | head -1)
+          git config user.name mlst-kr
+          git config user.email 212713209+mlst-kr@users.noreply.github.com
+          git commit --amend --no-edit --author="github-actions <41898282+github-actions[bot]@users.noreply.github.com>" --trailer "Co-authored-by: $AUTHOR" --signoff --quiet
+
+      - name: Publish
+        uses: ad-m/github-push-action@77c5b412c50b723d2a4fbc6d71fb5723bcd439aa
+        with:
+          repository: mlst-kr/${{ inputs.repo }}
+          branch: ${{ inputs.ref }}
+          ssh: true
