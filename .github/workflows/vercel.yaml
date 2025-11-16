@@ -1,0 +1,88 @@
+name: Build and publish to Vercel
+on:
+  workflow_dispatch:
+    inputs:
+      attempts:
+        type: number
+        required: true
+        default: 0
+      repo:
+        type: string
+        required: true
+      ref:
+        type: string
+        required: true
+
+permissions:
+  contents: none
+
+jobs:
+  build:
+    name: Build repository
+    runs-on: ubuntu-slim
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          repository: milestone-kr/${{ inputs.repo }}
+          ref: ${{ inputs.ref }}
+          ssh-key: ${{ secrets.SSH_KEY }}
+          path: src
+          submodules: true
+          show-progress: false
+
+      - id: commits
+        name: Save commit data for later use
+        shell: bash
+        working-directory: src
+        run: |
+          git show -s --format='%s (milestone-kr/${{ inputs.repo }}@%H)%n%n%b' HEAD >> $RUNNER_TEMP/.commit_msg
+          echo "author=$(git show -s --format='%an <%ae>' HEAD | head -1)" >> $GITHUB_OUTPUT
+          echo "committer=$(git show -s --format='%cn <%ce>' HEAD | head -1)" >> $GITHUB_OUTPUT
+
+      - name: Setup Package Manager
+        uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41
+        with:
+          github-token: ${{ github.token }}
+          working-directory: src
+          activate-environment: true
+
+      - name: Install Dependencies
+        shell: bash
+        working-directory: src
+        run: uv sync --color=never --no-progress --only-group=build --locked --quiet
+
+      - name: Prepare publish
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          repository: mlst-kr/${{ inputs.repo }}
+          ref: ${{ inputs.ref }}
+          ssh-key: ${{ secrets.SSH_KEY }}
+          path: dist
+          show-progress: false
+
+      - name: Clear previous build outputs
+        shell: bash
+        run: mv dist/.git .; rm -rf dist; mkdir dist; mv .git dist/
+
+      - name: Run buildscript
+        shell: bash
+        working-directory: src
+        run: ./build.sh; rm -f ./build.sh
+
+      - name: Commit build outputs
+        shell: bash
+        working-directory: dist
+        run: |
+          git config user.name mlst-kr
+          git config user.email 212713209+mlst-kr@users.noreply.github.com
+          git add .
+          git commit -F "$RUNNER_TEMP/.commit_msg" --author="${{ steps.commits.outputs.author }}" --trailer "Co-authored-by: ${{ steps.commits.outputs.committer }}" --trailer "Co-authored-by: github-actions <41898282+github-actions[bot]@users.noreply.github.com>" --signoff --quiet
+
+      - name: Publish
+        uses: ad-m/github-push-action@77c5b412c50b723d2a4fbc6d71fb5723bcd439aa
+        with:
+          repository: mlst-kr/${{ inputs.repo }}
+          branch: ${{ inputs.ref }}
+          ssh: true
+          directory: dist
